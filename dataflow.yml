@@ -1,0 +1,23 @@
+flow: HomeAutomation
+operators: []
+sources:
+  - id : Camera
+    uri: file://./camera-source/camera.py
+    configuration:
+      fps: 15
+    output:
+        id: Capture
+        type: frame
+sinks:
+  - id : DebugOutput
+    uri: file://./video-sink-debug/video-sink.py
+    input:
+        id: Image
+        type: frame
+links:
+- from:
+    node : Camera
+    output : Capture
+  to:
+    node : DebugOutput
+    input : Image
