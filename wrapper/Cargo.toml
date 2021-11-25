@@ -1,0 +1,19 @@
+[package]
+name = "wrapper"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+loader = {path = "../loader"}
+pyo3 = "0.15"
+
+[features]
+abi-py36 = ["pyo3/abi3-py36"]
+default = ["abi-py36"]
+
+[lib]
+name = "wrapper"
+crate-type=["cdylib"]
+path="src/lib.rs"
