@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use libloading::Library;
+use libloading::os::unix::Library;
 
 
 
@@ -20,7 +20,7 @@ pub struct PythonCodeDeclare {
 pub fn load_lib(path: PathBuf) -> (Library, Arc<dyn PythonCode>) {
 
     unsafe {
-        let library = Library::new(path).unwrap();
+        let library = Library::open(Some(path), libloading::os::unix::RTLD_NOW | libloading::os::unix::RTLD_GLOBAL).unwrap();
         let decl = library
             .get::<*mut PythonCodeDeclare>(b"python_code_declaration\0").unwrap()
             .read();
