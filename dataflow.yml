@@ -1,23 +1,58 @@
 flow: HomeAutomation
-operators: []
+operators:
+  - id: Detection
+    uri: file://./face-detect/detect.py
+    configuration:
+      net_cfg: ./face-detect/yolov3-face.cfg
+      net_weights: ./face-detect/yolov3-wider_16000.weights
+      classes: ./face-detect/face_classes.txt
+    inputs:
+      - id: Image
+        type: frame
+    outputs:
+      - id: Faces
+        type: face_array
+  - id: Recognition
+    uri: file://./recognition/recog.py
+    configuration:
+      weights: ./recognition/facenet_keras_weights.h5
+      encodings: ./recognition/encodings.pkl
+    inputs:
+      - id: Faces
+        type: face_array
+    outputs:
+      - id: People
+        type: people_array
 sources:
   - id : Camera
     uri: file://./camera-source/camera.py
     configuration:
-      fps: 15
+      fps: 1
     output:
         id: Capture
         type: frame
 sinks:
   - id : DebugOutput
-    uri: file://./video-sink-debug/video-sink.py
+    uri: file://./sink-debug/debug-sink.py
     input:
-        id: Image
-        type: frame
+        id: People
+        type: people_array
 links:
 - from:
     node : Camera
     output : Capture
   to:
-    node : DebugOutput
+    node : Detection
     input : Image
+- from:
+    node : Detection
+    output : Faces
+  to:
+    node : Recognition
+    input : Faces
+- from:
+    node : Recognition
+    output : People
+  to:
+    node : DebugOutput
+    input : People
