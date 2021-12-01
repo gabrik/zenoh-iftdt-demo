@@ -56,3 +56,14 @@ links:
   to:
     node : DebugOutput
     input : People
+
+
+mapping:
+  - id: Detection
+    runtime: cuda
+  - id: Recognition
+    runtime: cuda
+  - id: Camera
+    runtime: mac
+  - id: DebugOutput
+    runtime: mac

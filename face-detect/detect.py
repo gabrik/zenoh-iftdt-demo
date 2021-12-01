@@ -5,6 +5,7 @@ from zenoh_flow import Inputs, Operator, Outputs
 import io
 import copy
 import base64
+from PIL import Image
 
 class DetectState:
     def __init__(self, configuration):
@@ -26,6 +27,7 @@ class DetectState:
         self.encode_params = [int(cv2.IMWRITE_JPEG_QUALITY),100]
 
     def detect_faces(self, frame):
+        required_size=(224, 224)
         classes, scores, boxes = self.model.detect(frame, self.CONFIDENCE_THRESHOLD, self.NMS_THRESHOLD)
         faces = []
         for (classid, score, box) in zip(classes, scores, boxes):
@@ -33,7 +35,16 @@ class DetectState:
             x, y, width, height = box
             face = frame[y:y + height, x:x + width]
             if score > self.CONFIDENCE_THRESHOLD:
-                faces.append(copy.deepcopy(face[0]))
+                image = Image.fromarray(face)
+                image = image.resize(required_size)
+                face_array = np.asarray(image)
+                faces.append(face_array)
+                # output_file_path = './face-detected.jpg'
+                # print(f"Saving file {output_file_path}")
+                # cv2.imwrite(
+                # output_file_path,
+                # face_array)
+
         return faces
 
 class FaceDetection(Operator):
@@ -56,9 +67,8 @@ class FaceDetection(Operator):
         frame = bytes_to_frame(data)
 
         faces = state.detect_faces(frame)
-        resized_faces = list(map(resize_face, faces))
         encoded_faces = []
-        for f in resized_faces:
+        for f in faces:
                 encoded_faces.append(frame_to_bytes(f, state.encode_params))
 
         base64_faces = list(map(lambda f: base64.b64encode(f).decode('ascii'), encoded_faces))
@@ -68,6 +78,7 @@ class FaceDetection(Operator):
         # Sending out something only if faces detected
         if len(encoded_faces) > 0:
             output = {'detected_faces': base64_faces}
+            print(f'Detected {len(base64_faces)} faces')
             outputs['Faces'] = bytes(json.dumps(output), 'utf-8')
 
         return outputs
@@ -79,7 +90,6 @@ def register():
 
 def resize_face(face, required_size=(224, 224)):
     face = np.resize(face, required_size)
-
     return face
 
 def bytes_to_frame(bytes):

@@ -30,6 +30,10 @@ class RecogState:
             face = Image.fromarray(face)
             face_array = np.asarray(face)
 
+            # output_file_path = './face-received.jpg'
+            # print(f"Saving file {output_file_path}")
+            # cv2.imwrite(output_file_path, face_array)
+
             name, distance = self.model.model_prediction(face_array)
             print(f'Name {name} distance {distance}')
             if name != 'unknown':
