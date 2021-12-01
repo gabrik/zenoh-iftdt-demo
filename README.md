@@ -3,7 +3,7 @@ Zenoh Flow + Zenoh-pico Home Automation Demo
 
 # Example Application
 
-![Application Graph](application-graph.pdf)
+![Application Graph](application-graph.png)
 
 
 # How to run
