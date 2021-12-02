@@ -1,0 +1,35 @@
+flow: LuminosityDebug
+sources:
+  - id : Luminosity
+    uri: file:///Users/user/Documents/zenoh-flow-lab/zenoh-ifttt-demo/luminosity-source-bridge/bridge.py
+    output:
+        id: LuminosityRaw
+        type: float
+operators:
+  - id : LuminosityNorm
+    uri: file:///Users/user/Documents/zenoh-flow-lab/zenoh-ifttt-demo/luminosity-normalization/normalization.py
+    inputs:
+        - id: LuminosityRaw
+          type: float
+    outputs:
+        - id: LuminosityNorm
+          type: float
+sinks:
+  - id : DebugOutput
+    uri: file:///Users/user/Documents/zenoh-flow-lab/zenoh-ifttt-demo/sink-debug/debug-sink-luminosity.py
+    input:
+        id: Luminosity
+        type: float
+links:
+- from:
+    node : Luminosity
+    output : LuminosityRaw
+  to:
+    node : LuminosityNorm
+    input : LuminosityRaw
+- from:
+    node : LuminosityNorm
+    output : LuminosityNorm
+  to:
+    node : DebugOutput
+    input : Luminosity
