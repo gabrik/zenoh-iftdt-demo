@@ -78,7 +78,7 @@ class FaceDetection(Operator):
         # Sending out something only if faces detected
         if len(encoded_faces) > 0:
             output = {'detected_faces': base64_faces}
-            print(f'Detected {len(base64_faces)} faces')
+            #print(f'Detected {len(base64_faces)} faces')
             outputs['Faces'] = bytes(json.dumps(output), 'utf-8')
 
         return outputs

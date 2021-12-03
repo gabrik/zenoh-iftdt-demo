@@ -23,9 +23,9 @@ class DebugSink(Sink):
         return None
 
     def run(self, _ctx, _state, data):
-        people = data.data.decode('utf-8')
-        people = json.loads(people)
-        print(f"Detected people: {people}")
+        values = data.data.decode('utf-8')
+        values = json.loads(values)
+        print(f"Values: {values}")
 
 def register():
     return DebugSink

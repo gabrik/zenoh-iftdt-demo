@@ -1,5 +1,13 @@
 flow: HomeAutomation
 operators:
+  - id : LuminosityNorm
+    uri: file://./luminosity-normalization/normalization.py
+    inputs:
+        - id: LuminosityRaw
+          type: float
+    outputs:
+        - id: LuminosityNorm
+          type: float
   - id: Detection
     uri: file://./face-detect/detect.py
     configuration:
@@ -23,7 +31,22 @@ operators:
     outputs:
       - id: People
         type: people_array
+  - id: SensorFusion
+    uri: file://./sensor-fusion/sensor-fusion.py
+    inputs:
+      - id: People
+        type: people_array
+      - id: Luminosity
+        type: float
+    outputs:
+      - id: Lamps
+        type: lamp_dict
 sources:
+  - id : Luminosity
+    uri: file://./luminosity-source-bridge/bridge.py
+    output:
+        id: LuminosityRaw
+        type: float
   - id : Camera
     uri: file://./camera-source/camera.py
     configuration:
@@ -35,8 +58,8 @@ sinks:
   - id : DebugOutput
     uri: file://./sink-debug/debug-sink.py
     input:
-        id: People
-        type: people_array
+        id: Data
+        type: lamp_dict
 links:
 - from:
     node : Camera
@@ -54,16 +77,33 @@ links:
     node : Recognition
     output : People
   to:
-    node : DebugOutput
+    node : SensorFusion
     input : People
+- from:
+    node : SensorFusion
+    output : Lamps
+  to:
+    node : DebugOutput
+    input : Data
+- from:
+    node : Luminosity
+    output : LuminosityRaw
+  to:
+    node : LuminosityNorm
+    input : LuminosityRaw
+- from:
+    node : LuminosityNorm
+    output : LuminosityNorm
+  to:
+    node : SensorFusion
+    input : Luminosity
 
-
-mapping:
-  - id: Detection
-    runtime: cuda
-  - id: Recognition
-    runtime: cuda
-  - id: Camera
-    runtime: mac
-  - id: DebugOutput
-    runtime: mac
+# mapping:
+#   - id: Detection
+#     runtime: cuda
+#   - id: Recognition
+#     runtime: cuda
+#   - id: Camera
+#     runtime: mac
+#   - id: DebugOutput
+#     runtime: mac

@@ -35,7 +35,7 @@ class RecogState:
             # cv2.imwrite(output_file_path, face_array)
 
             name, distance = self.model.model_prediction(face_array)
-            print(f'Name {name} distance {distance}')
+            #print(f'Name {name} distance {distance}')
             if name != 'unknown':
                 people.append(name)
         return people
