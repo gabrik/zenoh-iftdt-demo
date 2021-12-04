@@ -649,12 +649,15 @@ class FaceNet():
         encode = self.l2_normalizer.transform(encode.reshape(1, -1))[0]
         distance = float("inf")
         name = 'unknown'
+        predictions = []
         for db_name, db_encode in self.encodings.items():
             dist = cosine(db_encode, encode)
-            #dist = FaceNet.face_distance(db_encode, encode)
-            if dist < recognition_t and dist < distance:
-                name = db_name
-                distance = dist
+            predictions.append((db_name, dist))
+            if dist < recognition_t:
+                predictions.append((db_name, dist))
+
+        if len(predictions) > 0:
+            name, distance = min(predictions, key = lambda v: v[1])
         return name, distance
 
 
