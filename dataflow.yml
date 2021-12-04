@@ -55,8 +55,12 @@ sources:
         id: Capture
         type: frame
 sinks:
-  - id : DebugOutput
-    uri: file://./sink-debug/debug-sink.py
+  - id : AlexaSink
+    uri: file://./alexa-sink/alexa-sink.py
+    configuration:
+      code: aa
+      client_id: bb
+      client_secret: cc
     input:
         id: Data
         type: lamp_dict
@@ -83,7 +87,7 @@ links:
     node : SensorFusion
     output : Lamps
   to:
-    node : DebugOutput
+    node : AlexaSink
     input : Data
 - from:
     node : Luminosity
