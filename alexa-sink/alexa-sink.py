@@ -13,80 +13,68 @@
 ##
 
 from zenoh_flow import Sink
+
 import json
-import random
 import uuid
-import logging
-import sys
-import time
-import os
 import requests
+
+import time
 from datetime import datetime, timedelta
 
 # Constants
-UTC_FORMAT = "%Y-%m-%dT%H:%M:%S.00Z"
+ALEXA_URI = "https://api.eu.amazonalexa.com/v3/events"
 LWA_TOKEN_URI = "https://api.amazon.com/auth/o2/token"
 LWA_HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
 }
 
-TOKEN = ""
-
-# Update to appropriate URI for your region
-ALEXA_URI = "https://api.eu.amazonalexa.com/v3/events"
-
-def get_utc_timestamp(seconds=None):
-    t = datetime.utcnow() + timedelta(hours=1)
-    return t.strftime(UTC_FORMAT)
-
-def get_utc_timestamp_from_string(string):
-    return datetime.strptime(string, UTC_FORMAT)
-
-def get_uuid():
-    return str(uuid.uuid4())
-
 ### Authentication functions
-def get_need_new_token():
-    """Checks whether the access token is missing or needed to be refreshed"""
-    need_new_token_response = {
-        "need_new_token": False,
-        "access_token": "",
-        "refresh_token": ""
-    }
+def get_token_params(client_id, client_secret, auth_code, refresh_token):
+    global token_json
 
-    if len(TOKEN) != 0:
-        token = TOKEN.split("***")
-        token_received_datetime = get_utc_timestamp_from_string(token[0])
-        token_json = json.loads(token[1])
-        token_expires_in = token_json["expires_in"] - PREEMPTIVE_REFRESH_TTL_IN_SECONDS
-        token_expires_datetime = token_received_datetime + timedelta(seconds=token_expires_in)
-        current_datetime = datetime.utcnow()
+    token_params = {}
 
-        need_new_token_response["need_new_token"] = current_datetime > token_expires_datetime
-        need_new_token_response["access_token"] = token_json["access_token"]
-        need_new_token_response["refresh_token"] = token_json["refresh_token"]
+    if len(token_json) == 0:
+        token_params["is_token_valid"] = False
+        token_params["auth_code"] = auth_code
+        token_params["refresh_token"] = refresh_token
+        print("Token does not exist yet")
     else:
-        need_new_token_response["need_new_token"] = True
+        remaining_time = (token_json["expires_in"] - datetime.utcnow()).total_seconds()
+        print(remaining_time)
+        if remaining_time < 2800:
+            print("Token has expired...it has to be renewed")
+            token_params["is_token_valid"] = False
+        else:
+            print("Token is still valid")
+            token_params["is_token_valid"] = True
 
-    return need_new_token_response
+        token_params["access_token"] = token_json["access_token"]
+        token_params["refresh_token"] = token_json["refresh_token"]
 
-def get_access_token(client_id, client_secret, code):
-    # Performs access token or token refresh request as needed and returns valid access token
-    need_new_token_response = get_need_new_token()
-    access_token = ""
+    return token_params
 
-    if need_new_token_response["need_new_token"]:
-        if len(TOKEN) != 0:
+def get_access_token(client_id, client_secret, auth_code, refresh_token):
+    global token_json
+
+    token_params = get_token_params(client_id, client_secret, auth_code, refresh_token)
+
+    if token_params["is_token_valid"]:
+        return token_params["access_token"]
+    else:
+        if len(token_params["refresh_token"]) != 0:
+            print("Renewing token with the refresh token")
             lwa_params = {
                 "grant_type" : "refresh_token",
-                "refresh_token": need_new_token_response["refresh_token"],
+                "refresh_token": token_params["refresh_token"],
                 "client_id": client_id,
                 "client_secret": client_secret
             }
         else:
+            print("Requesting token for the first time")
             lwa_params = {
                 "grant_type" : "authorization_code",
-                "code": code,
+                "code": auth_code,
                 "client_id": client_id,
                 "client_secret": client_secret
             }
@@ -95,15 +83,11 @@ def get_access_token(client_id, client_secret, code):
         if response.status_code != 200:
             return None
 
-        # store token in file
-        token = get_utc_timestamp() + "***" + response.text
-        TOKEN = token
+        token_json = json.loads(response.text)
+        print(token_json)
+        token_json["expires_in"] = datetime.utcnow() + timedelta(seconds=token_json["expires_in"])
 
-        access_token = json.loads(response.text)["access_token"]
-    else:
-        access_token = need_new_token_response["access_token"]
-
-    return access_token
+        return token_json["access_token"]
 
 class AlexaSinkState:
     def __init__(self, configuration):
@@ -111,12 +95,13 @@ class AlexaSinkState:
             raise ValueError("Missing client ID for Alexa authentication")
         if configuration['client_secret'] is None:
             raise ValueError("Missing client secret for Alexa authentication")
-        if configuration['code'] is None:
-            raise ValueError("Missing CODE for Alexa authentication")
+        if configuration['auth_code'] is None and configuration['refresh_token'] is None:
+            raise ValueError("Missing authentication code or refresh token for Alexa authentication")
 
         self.client_id = configuration['client_id']
         self.client_secret = configuration['client_secret']
-        self.code = configuration['code']
+        self.auth_code = configuration['auth_code']
+        self.refresh_token = configuration['refresh_token']
 
 class AlexaSink(Sink):
     def initialize(self, configuration):
@@ -127,72 +112,80 @@ class AlexaSink(Sink):
 
     def run(self, _ctx, state, data):
         light = json.loads(data.data)
+
+        routine = ""
+        action = ""
         if light['Gabriele_Baldoni'] == 0.0:
+            routine = "virtual-routine-1"
             action = "NOT_DETECTED"
-        else
+        else:
+            routine = "virtual-routine-1"
             action = "DETECTED"
 
-        token = get_access_token(state.client_id, state.client_secret, state.code)
+        token = get_access_token(state.client_id, state.client_secret, state.auth_code, state.refresh_token)
+        if token is None:
+            print("Error while acquiring token")
+            return
+
         alexa_headers = {
             "Authorization": "Bearer {}".format(token),
             "Content-Type": "application/json;charset=UTF-8"
         }
 
-        if token:
-            message_id = get_uuid()
-            time_of_sample = get_utc_timestamp()
+        message_id = str(uuid.uuid4())
+        time_of_sample = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.00Z")
 
-            # ensure that this change or state report is appropriate for your user and skill
-            alexa_psu = {
-                "context": {
-                    "properties": [{
-                        "namespace": "Alexa.EndpointHealth",
-                        "name": "connectivity",
-                        "value": {
-                            "value": "OK"
-                        },
-                        "timeOfSample": time_of_sample,
-                        "uncertaintyInMilliseconds": 500
-                    }, {
-                        "namespace": "Alexa.ContactSensor",
-                        "name": "detectionState",
-                        "value": action,
-                        "timeOfSample": time_of_sample,
-                        "uncertaintyInMilliseconds": 500
-                    }]
+        # ensure that this change or state report is appropriate for your user and skill
+        alexa_psu = {
+            "context": {
+                "properties": [{
+                    "namespace": "Alexa.EndpointHealth",
+                    "name": "connectivity",
+                    "value": {
+                        "value": "OK"
+                    },
+                    "timeOfSample": time_of_sample,
+                    "uncertaintyInMilliseconds": 500
+                }, {
+                    "namespace": "Alexa.ContactSensor",
+                    "name": "detectionState",
+                    "value": action,
+                    "timeOfSample": time_of_sample,
+                    "uncertaintyInMilliseconds": 500
+                }]
+            },
+            "event": {
+                "header": {
+                    "namespace": "Alexa",
+                    "name": "ChangeReport",
+                    "payloadVersion": "3",
+                    "messageId": message_id
                 },
-                "event": {
-                    "header": {
-                        "namespace": "Alexa",
-                        "name": "ChangeReport",
-                        "payloadVersion": "3",
-                        "messageId": message_id
+                "endpoint": {
+                    "scope": {
+                        "type": "BearerToken",
+                        "token": token
                     },
-                    "endpoint": {
-                        "scope": {
-                            "type": "BearerToken",
-                            "token": token
+                    "endpointId": routine
+                },
+                "payload": {
+                    "change": {
+                        "cause": {
+                            "type": "PHYSICAL_INTERACTION"
                         },
-                        "endpointId": "virtual-routine-01"
-                    },
-                    "payload": {
-                        "change": {
-                            "cause": {
-                                "type": "PHYSICAL_INTERACTION"
-                            },
-                            "properties": [{
-                                "namespace": "Alexa.ContactSensor",
-                                "name": "detectionState",
-                                "value": action,
-                                "timeOfSample": time_of_sample,
-                                "uncertaintyInMilliseconds": 500
-                            }]
-                        }
+                        "properties": [{
+                            "namespace": "Alexa.ContactSensor",
+                            "name": "detectionState",
+                            "value": action,
+                            "timeOfSample": time_of_sample,
+                            "uncertaintyInMilliseconds": 500
+                        }]
                     }
                 }
             }
+        }
 
-            response = requests.post(ALEXA_URI, headers=alexa_headers, data=json.dumps(alexa_psu), allow_redirects=True)
+        response = requests.post(ALEXA_URI, headers=alexa_headers, data=json.dumps(alexa_psu), allow_redirects=True)
 
 def register():
     return AlexaSink
