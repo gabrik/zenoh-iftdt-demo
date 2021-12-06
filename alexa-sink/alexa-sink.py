@@ -129,7 +129,7 @@ class AlexaSink(Sink):
         return None
 
     def run(self, _ctx, state, data):
-        light = json.loads(data)#.data)
+        light = json.loads(data.data)
 
         routine = ""
         action = ""
