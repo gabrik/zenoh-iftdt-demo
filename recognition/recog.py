@@ -639,10 +639,7 @@ class FaceNet():
             pickle.dump(encoding_dict, file)
 
     def model_prediction(self, face):
-        recognition_t=0.5
-        # if self.encodings is None:
-        #     path = './encodings.pkl'
-        #     self.encodings = FaceNet.load_pickle(path)
+        recognition_t=0.4
 
         face_d = FaceNet.preprocess(face)
         encode = self.model.predict(face_d)[0]
@@ -655,7 +652,7 @@ class FaceNet():
             predictions.append((db_name, dist))
             if dist < recognition_t:
                 predictions.append((db_name, dist))
-
+        # print(f'Predictions {predictions}')
         if len(predictions) > 0:
             name, distance = min(predictions, key = lambda v: v[1])
         return name, distance

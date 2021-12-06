@@ -61,6 +61,7 @@ sinks:
       code: aa
       client_id: bb
       client_secret: cc
+      refresh_token: dd
     input:
         id: Data
         type: lamp_dict
@@ -109,5 +110,11 @@ links:
 #     runtime: cuda
 #   - id: Camera
 #     runtime: mac
-#   - id: DebugOutput
+#   - id: SensorFusion
+#     runtime: mac
+#   - id: LuminosityNorm
+#     runtime: mac
+#   - id: Luminosity
+#     runtime: mac
+#   - id: AlexaSink
 #     runtime: mac

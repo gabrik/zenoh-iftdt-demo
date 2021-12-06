@@ -17,7 +17,7 @@ from zenoh_flow import Sink
 import json
 import uuid
 import requests
-
+import os
 import time
 from datetime import datetime, timedelta
 
@@ -27,6 +27,23 @@ LWA_TOKEN_URI = "https://api.amazon.com/auth/o2/token"
 LWA_HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
 }
+token_json = ""
+
+
+def save_refresh_token(token):
+    file_name = "/tmp/zf-iftdt.token"
+    token_file = open(file_name, 'w')
+    token_file.write(token)
+    token_file.close()
+
+def read_refresh_token():
+    file_name = "/tmp/zf-iftdt.token"
+    if os.path.isfile(file_name):
+        token_file = open(file_name, 'r')
+        token = token_file.readlines(token)
+        token_file.close()
+        return token[0]
+    return ""
 
 ### Authentication functions
 def get_token_params(client_id, client_secret, auth_code, refresh_token):
@@ -38,15 +55,15 @@ def get_token_params(client_id, client_secret, auth_code, refresh_token):
         token_params["is_token_valid"] = False
         token_params["auth_code"] = auth_code
         token_params["refresh_token"] = refresh_token
-        print("Token does not exist yet")
+        #print("Token does not exist yet")
     else:
         remaining_time = (token_json["expires_in"] - datetime.utcnow()).total_seconds()
         print(remaining_time)
-        if remaining_time < 2800:
-            print("Token has expired...it has to be renewed")
+        if remaining_time < 120:
+            #print("Token has expired...it has to be renewed")
             token_params["is_token_valid"] = False
         else:
-            print("Token is still valid")
+            #print("Token is still valid")
             token_params["is_token_valid"] = True
 
         token_params["access_token"] = token_json["access_token"]
@@ -60,10 +77,10 @@ def get_access_token(client_id, client_secret, auth_code, refresh_token):
     token_params = get_token_params(client_id, client_secret, auth_code, refresh_token)
 
     if token_params["is_token_valid"]:
-        return token_params["access_token"]
+        return token_params
     else:
         if len(token_params["refresh_token"]) != 0:
-            print("Renewing token with the refresh token")
+            #print("Renewing token with the refresh token")
             lwa_params = {
                 "grant_type" : "refresh_token",
                 "refresh_token": token_params["refresh_token"],
@@ -71,7 +88,7 @@ def get_access_token(client_id, client_secret, auth_code, refresh_token):
                 "client_secret": client_secret
             }
         else:
-            print("Requesting token for the first time")
+            #print("Requesting token for the first time")
             lwa_params = {
                 "grant_type" : "authorization_code",
                 "code": auth_code,
@@ -79,15 +96,12 @@ def get_access_token(client_id, client_secret, auth_code, refresh_token):
                 "client_secret": client_secret
             }
         response = requests.post(LWA_TOKEN_URI, headers=LWA_HEADERS, data=lwa_params)
-
         if response.status_code != 200:
             return None
 
         token_json = json.loads(response.text)
-        print(token_json)
-        token_json["expires_in"] = datetime.utcnow() + timedelta(seconds=token_json["expires_in"])
-
-        return token_json["access_token"]
+        token_json["expires_in"] = datetime.utcnow() + timedelta(seconds=token_json["expires_in"])# + timedelta(hours=1)
+        return token_json
 
 class AlexaSinkState:
     def __init__(self, configuration):
@@ -101,7 +115,11 @@ class AlexaSinkState:
         self.client_id = configuration['client_id']
         self.client_secret = configuration['client_secret']
         self.auth_code = configuration['auth_code']
-        self.refresh_token = configuration['refresh_token']
+
+        if configuration['refresh_token'] is None:
+            self.refresh_token = read_refresh_token()
+        else:
+            self.refresh_token = configuration['refresh_token']
 
 class AlexaSink(Sink):
     def initialize(self, configuration):
@@ -111,21 +129,35 @@ class AlexaSink(Sink):
         return None
 
     def run(self, _ctx, state, data):
-        light = json.loads(data.data)
+        light = json.loads(data)#.data)
 
         routine = ""
         action = ""
-        if light['Gabriele_Baldoni'] == 0.0:
-            routine = "virtual-routine-1"
-            action = "NOT_DETECTED"
+        print(f'Lights {light}')
+        if light.get('SomeOne') is not None:
+            if light['SomeOne'] == 0.0:
+                print('Not detected')
+                routine = "virtual-routine-01"
+                action = "NOT_DETECTED"
+            else:
+                print('Detected')
+                routine = "virtual-routine-01"
+                action = "DETECTED"
         else:
-            routine = "virtual-routine-1"
-            action = "DETECTED"
+            print('Not detected')
+            routine = "virtual-routine-01"
+            action = "NOT_DETECTED"
 
-        token = get_access_token(state.client_id, state.client_secret, state.auth_code, state.refresh_token)
+        tokens = get_access_token(state.client_id, state.client_secret, state.auth_code, state.refresh_token)
+        #print(f'Tokens: {tokens}')
+        token = tokens['access_token']
+        rf_token = tokens['refresh_token']
         if token is None:
             print("Error while acquiring token")
             return
+
+        save_refresh_token(rf_token)
+        state.refresh_token = rf_token
 
         alexa_headers = {
             "Authorization": "Bearer {}".format(token),
@@ -185,7 +217,37 @@ class AlexaSink(Sink):
             }
         }
 
+        #print(f'Request {alexa_psu}')
         response = requests.post(ALEXA_URI, headers=alexa_headers, data=json.dumps(alexa_psu), allow_redirects=True)
+        #print(f'Response {response.text}')
 
 def register():
     return AlexaSink
+
+
+# def main():
+#     import time
+#     conf = {
+#       'auth_code': '',
+#       'client_id': '',
+#       'client_secret': '',
+#       'refresh_token': ''
+#     }
+
+#     alexa_sink = AlexaSink()
+#     state = alexa_sink.initialize(conf)
+#     ON = {'SomeOne':1.0}
+#     OFF = {'SomeOne':0.0}
+#     i = 0
+#     while True:
+#         element = ON if i % 2 == 0 else OFF
+#         data = json.dumps(element)
+#         input(f'Press enter to send {element}\n')
+#         alexa_sink.run(None, state, data)
+#         print(f'Sent {element}')
+#         i += 1
+
+
+
+# if __name__ == '__main__':
+#     main()

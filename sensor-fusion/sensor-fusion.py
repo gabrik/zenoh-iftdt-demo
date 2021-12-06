@@ -5,7 +5,7 @@ import struct
 ON=1.0
 OFF=0.0
 
-KNOWN_PEOPLE = []
+KNOWN_PEOPLE = ["SomeOne"]
 
 class SensorFusion(Operator):
     def initialize(self, configuration):
@@ -34,7 +34,7 @@ class SensorFusion(Operator):
         people = json.loads(inputs.get('People').data)['detected_people']
         luminosity = struct.unpack('f',inputs.get('Luminosity').data)[0]
 
-
+        # print(f'People {people}, Luminosity {luminosity}')
         output_value = {}
         for person in KNOWN_PEOPLE:
             if person in people and luminosity < 0.5:
