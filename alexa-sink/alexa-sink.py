@@ -225,8 +225,8 @@ class AlexaSink(Sink):
         token = get_token(state)
         if token == None:
             return
-
         actions = json.loads(data.data)
+        print(f'Actions {actions}')
         for item in state.person_mapping:
             action = "NOT_DETECTED"
             if actions.get(item['name']) is not None:
