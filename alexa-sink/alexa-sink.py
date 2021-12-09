@@ -20,6 +20,7 @@ import requests
 import os
 import time
 from datetime import datetime, timedelta
+import threading
 
 # Constants
 ALEXA_URI = "https://api.eu.amazonalexa.com/v3/events"
@@ -111,15 +112,20 @@ class AlexaSinkState:
             raise ValueError("Missing client secret for Alexa authentication")
         if configuration['auth_code'] is None and configuration['refresh_token'] is None:
             raise ValueError("Missing authentication code or refresh token for Alexa authentication")
+        if configuration['person_mapping'] is None:
+            raise ValueError("Missing person mapping to Alexa routine")
 
         self.client_id = configuration['client_id']
         self.client_secret = configuration['client_secret']
         self.auth_code = configuration['auth_code']
+        self.person_mapping = configuration['person_mapping']
 
         if configuration['refresh_token'] is None:
             self.refresh_token = read_refresh_token()
         else:
             self.refresh_token = configuration['refresh_token']
+
+        self.timer = None
 
 class AlexaSink(Sink):
     def initialize(self, configuration):
@@ -129,43 +135,61 @@ class AlexaSink(Sink):
         return None
 
     def run(self, _ctx, state, data):
-        light = json.loads(data.data)
+        if state.timer != None:
+            state.timer.cancel()
 
-        routine = ""
-        action = ""
-        print(f'Lights {light}')
-        if light.get('SomeOne') is not None:
-            if light['SomeOne'] == 0.0:
-                print('Not detected')
-                routine = "virtual-routine-01"
-                action = "NOT_DETECTED"
-            else:
-                print('Detected')
-                routine = "virtual-routine-01"
-                action = "DETECTED"
-        else:
-            print('Not detected')
-            routine = "virtual-routine-01"
+        token = get_token(state)
+        if token == None:
+            return
+
+        actions = json.loads(data)#.data)
+        for item in state.person_mapping:
             action = "NOT_DETECTED"
+            if actions.get(item['name']) is not None:
+                if actions[item['name']] != 0.0:
+                    print('Detected')
+                    action = "DETECTED"
 
+            if action != item['last_state']:
+                print("Sending post")
+                #send_post(action, item['routine'], token)
+                item['last_state'] = action
+
+        state.timer = threading.Timer(5, self.timeout, (state,))
+        state.timer.start()
+
+    def timeout(self, state):
+        token = get_token(state)
+        if token == None:
+            return
+
+        for item in state.person_mapping:
+            action = "NOT_DETECTED"
+            if action != item['last_state']:
+                send_post(action, item['routine'], token)
+                item['last_state'] = action
+
+    def get_token(self, state):
         tokens = get_access_token(state.client_id, state.client_secret, state.auth_code, state.refresh_token)
         #print(f'Tokens: {tokens}')
         token = tokens['access_token']
         rf_token = tokens['refresh_token']
         if token is None:
             print("Error while acquiring token")
-            return
+            return None
 
         save_refresh_token(rf_token)
         state.refresh_token = rf_token
+        return token
+
+    def send_post(self, action, routine, token):
+        message_id = str(uuid.uuid4())
+        time_of_sample = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.00Z")
 
         alexa_headers = {
             "Authorization": "Bearer {}".format(token),
             "Content-Type": "application/json;charset=UTF-8"
         }
-
-        message_id = str(uuid.uuid4())
-        time_of_sample = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.00Z")
 
         # ensure that this change or state report is appropriate for your user and skill
         alexa_psu = {
@@ -224,30 +248,29 @@ class AlexaSink(Sink):
 def register():
     return AlexaSink
 
-
-# def main():
-#     import time
-#     conf = {
-#       'auth_code': '',
-#       'client_id': '',
-#       'client_secret': '',
-#       'refresh_token': ''
-#     }
-
-#     alexa_sink = AlexaSink()
-#     state = alexa_sink.initialize(conf)
-#     ON = {'SomeOne':1.0}
-#     OFF = {'SomeOne':0.0}
-#     i = 0
-#     while True:
-#         element = ON if i % 2 == 0 else OFF
-#         data = json.dumps(element)
-#         input(f'Press enter to send {element}\n')
-#         alexa_sink.run(None, state, data)
-#         print(f'Sent {element}')
-#         i += 1
-
-
-
-# if __name__ == '__main__':
-#     main()
+#def main():
+#    import time
+#    conf = {
+#      'auth_code': '',
+#      'client_id': '',
+#      'client_secret': '',
+#      'refresh_token': '',
+#      'person_mapping': [{'name': 'SomeOne', 'routine': 'routine-trigger-01', 'last_state': 'NOT_DETECTED'},
+#                         {'name': 'SomeTwo', 'routine': 'routine-trigger-02', 'last_state': 'NOT_DETECTED'}]
+#    }
+#
+#    alexa_sink = AlexaSink()
+#    state = alexa_sink.initialize(conf)
+#    ON = {'SomeOne':1.0, 'SomeTwo':1.0}
+#    OFF = {'SomeOne':1.0, 'SomeTwo':0.0}
+#    i = 0
+#    while True:
+#        element = ON if i % 2 == 0 else OFF
+#        data = json.dumps(element)
+#        input(f'Press enter to send {element}\n')
+#        alexa_sink.run(None, state, data)
+#        print(f'Sent {element}')
+#        i += 1
+#
+#if __name__ == '__main__':
+#    main()
