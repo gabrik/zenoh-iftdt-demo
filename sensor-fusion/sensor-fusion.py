@@ -5,11 +5,13 @@ import struct
 ON=1.0
 OFF=0.0
 
-KNOWN_PEOPLE = ["SomeOne"]
+class SensorFusionState:
+    def __init__(self, configuration):
+        self.know_people = configuration.get('people', [])
 
 class SensorFusion(Operator):
     def initialize(self, configuration):
-         return None
+        return SensorFusionState(configuration)
 
     def finalize(self, state):
         return None
@@ -36,7 +38,7 @@ class SensorFusion(Operator):
 
         # print(f'People {people}, Luminosity {luminosity}')
         output_value = {}
-        for person in KNOWN_PEOPLE:
+        for person in state.know_people:
             if person in people and luminosity < 0.5:
                 output_value[person]=ON
             else:

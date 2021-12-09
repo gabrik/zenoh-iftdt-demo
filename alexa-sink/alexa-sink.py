@@ -104,6 +104,90 @@ def get_access_token(client_id, client_secret, auth_code, refresh_token):
         token_json["expires_in"] = datetime.utcnow() + timedelta(seconds=token_json["expires_in"])# + timedelta(hours=1)
         return token_json
 
+def timeout(state):
+    token = get_token(state)
+    if token == None:
+        return
+    for item in state.person_mapping:
+        action = "NOT_DETECTED"
+        if action != item['last_state']:
+            send_post(action, item['routine'], token)
+            item['last_state'] = action
+
+def get_token(state):
+    tokens = get_access_token(state.client_id, state.client_secret, state.auth_code, state.refresh_token)
+    #print(f'Tokens: {tokens}')
+    token = tokens['access_token']
+    rf_token = tokens['refresh_token']
+    if token is None:
+        print("Error while acquiring token")
+        return None
+    save_refresh_token(rf_token)
+    state.refresh_token = rf_token
+    return token
+
+def send_post(action, routine, token):
+    message_id = str(uuid.uuid4())
+    time_of_sample = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.00Z")
+    alexa_headers = {
+        "Authorization": "Bearer {}".format(token),
+        "Content-Type": "application/json;charset=UTF-8"
+    }
+    # ensure that this change or state report is appropriate for your user and skill
+    alexa_psu = {
+        "context": {
+            "properties": [{
+                "namespace": "Alexa.EndpointHealth",
+                "name": "connectivity",
+                "value": {
+                    "value": "OK"
+                },
+                "timeOfSample": time_of_sample,
+                "uncertaintyInMilliseconds": 500
+            }, {
+                "namespace": "Alexa.ContactSensor",
+                "name": "detectionState",
+                "value": action,
+                "timeOfSample": time_of_sample,
+                "uncertaintyInMilliseconds": 500
+            }]
+        },
+        "event": {
+            "header": {
+                "namespace": "Alexa",
+                "name": "ChangeReport",
+                "payloadVersion": "3",
+                "messageId": message_id
+            },
+            "endpoint": {
+                "scope": {
+                    "type": "BearerToken",
+                    "token": token
+                },
+                "endpointId": routine
+            },
+            "payload": {
+                "change": {
+                    "cause": {
+                        "type": "PHYSICAL_INTERACTION"
+                    },
+                    "properties": [{
+                        "namespace": "Alexa.ContactSensor",
+                        "name": "detectionState",
+                        "value": action,
+                        "timeOfSample": time_of_sample,
+                        "uncertaintyInMilliseconds": 500
+                    }]
+                }
+            }
+        }
+    }
+    #print(f'Request {alexa_psu}')
+    response = requests.post(ALEXA_URI, headers=alexa_headers, data=json.dumps(alexa_psu), allow_redirects=True)
+    #print(f'Response {response.text}')
+
+
+
 class AlexaSinkState:
     def __init__(self, configuration):
         if configuration['client_id'] is None:
@@ -142,7 +226,7 @@ class AlexaSink(Sink):
         if token == None:
             return
 
-        actions = json.loads(data)#.data)
+        actions = json.loads(data.data)
         for item in state.person_mapping:
             action = "NOT_DETECTED"
             if actions.get(item['name']) is not None:
@@ -152,98 +236,11 @@ class AlexaSink(Sink):
 
             if action != item['last_state']:
                 print("Sending post")
-                #send_post(action, item['routine'], token)
-                item['last_state'] = action
-
-        state.timer = threading.Timer(5, self.timeout, (state,))
-        state.timer.start()
-
-    def timeout(self, state):
-        token = get_token(state)
-        if token == None:
-            return
-
-        for item in state.person_mapping:
-            action = "NOT_DETECTED"
-            if action != item['last_state']:
                 send_post(action, item['routine'], token)
                 item['last_state'] = action
 
-    def get_token(self, state):
-        tokens = get_access_token(state.client_id, state.client_secret, state.auth_code, state.refresh_token)
-        #print(f'Tokens: {tokens}')
-        token = tokens['access_token']
-        rf_token = tokens['refresh_token']
-        if token is None:
-            print("Error while acquiring token")
-            return None
-
-        save_refresh_token(rf_token)
-        state.refresh_token = rf_token
-        return token
-
-    def send_post(self, action, routine, token):
-        message_id = str(uuid.uuid4())
-        time_of_sample = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.00Z")
-
-        alexa_headers = {
-            "Authorization": "Bearer {}".format(token),
-            "Content-Type": "application/json;charset=UTF-8"
-        }
-
-        # ensure that this change or state report is appropriate for your user and skill
-        alexa_psu = {
-            "context": {
-                "properties": [{
-                    "namespace": "Alexa.EndpointHealth",
-                    "name": "connectivity",
-                    "value": {
-                        "value": "OK"
-                    },
-                    "timeOfSample": time_of_sample,
-                    "uncertaintyInMilliseconds": 500
-                }, {
-                    "namespace": "Alexa.ContactSensor",
-                    "name": "detectionState",
-                    "value": action,
-                    "timeOfSample": time_of_sample,
-                    "uncertaintyInMilliseconds": 500
-                }]
-            },
-            "event": {
-                "header": {
-                    "namespace": "Alexa",
-                    "name": "ChangeReport",
-                    "payloadVersion": "3",
-                    "messageId": message_id
-                },
-                "endpoint": {
-                    "scope": {
-                        "type": "BearerToken",
-                        "token": token
-                    },
-                    "endpointId": routine
-                },
-                "payload": {
-                    "change": {
-                        "cause": {
-                            "type": "PHYSICAL_INTERACTION"
-                        },
-                        "properties": [{
-                            "namespace": "Alexa.ContactSensor",
-                            "name": "detectionState",
-                            "value": action,
-                            "timeOfSample": time_of_sample,
-                            "uncertaintyInMilliseconds": 500
-                        }]
-                    }
-                }
-            }
-        }
-
-        #print(f'Request {alexa_psu}')
-        response = requests.post(ALEXA_URI, headers=alexa_headers, data=json.dumps(alexa_psu), allow_redirects=True)
-        #print(f'Response {response.text}')
+        state.timer = threading.Timer(5, timeout, (state,))
+        state.timer.start()
 
 def register():
     return AlexaSink
