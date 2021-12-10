@@ -184,8 +184,13 @@ def lambda_handler(request, context):
                 interface='Alexa.ContactSensor',
                 supported=[{'name': 'detectionState'}])
             rsp.add_payload_endpoint(
-                friendly_name='Virtual Routine',
-                endpoint_id='virtual-routine-01',
+                friendly_name='Routine Trigger 1',
+                endpoint_id='routine-trigger-01',
+                capabilities=[capability_alexa, capability_alexa_powercontroller])
+
+            rsp.add_payload_endpoint(
+                friendly_name='Routine Trigger 2',
+                endpoint_id='routine-trigger-02',
                 capabilities=[capability_alexa, capability_alexa_powercontroller])
             return rsp.get()
 
