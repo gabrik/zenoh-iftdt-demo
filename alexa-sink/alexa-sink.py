@@ -1,18 +1,18 @@
-##
-## Copyright (c) 2017, 2021 ADLINK Technology Inc.
-##
-## This program and the accompanying materials are made available under the
-## terms of the Eclipse Public License 2.0 which is available at
-## http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
-## which is available at https://www.apache.org/licenses/LICENSE-2.0.
-##
-## SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
-##
-## Contributors:
-##   ADLINK zenoh team, <zenoh@adlink-labs.tech>
-##
+#
+# Copyright (c) 2022 ZettaScale Technology
+#
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# http://www.eclipse.org/legal/epl-2.0, or the Apache License, Version 2.0
+# which is available at https://www.apache.org/licenses/LICENSE-2.0.
+#
+# SPDX-License-Identifier: EPL-2.0 OR Apache-2.0
+#
+# Contributors:
+#   ZettaScale Zenoh Team, <zenoh@zettascale.tech>
+#
 
-from zenoh_flow import Sink
+from zenoh_flow.interfaces import Sink
 
 import json
 import uuid
@@ -211,21 +211,31 @@ class AlexaSinkState:
 
         self.timer = None
 
+        self.outfile = "/tmp/alexa-sink.csv"
+        if configuration['outfile'] is not None:
+            self.outfile = configuration['outfile']
+        self.file = open(self.outfile, "w+")
+        self.file.write("node,time_in,time_out,kind")
+        self.file.flush()
+
 class AlexaSink(Sink):
     def initialize(self, configuration):
         return AlexaSinkState(configuration)
 
-    def finalize(self, _state):
+    def finalize(self, state):
+        state.file.close()
         return None
 
     def run(self, _ctx, state, data):
+        intime = time.time_ns()
+
         if state.timer != None:
             state.timer.cancel()
 
         token = get_token(state)
         if token == None:
             return
-        actions = json.loads(data.data)
+        actions = json.loads(data.get_data())
         print(f'Actions {actions}')
         for item in state.person_mapping:
             action = "NOT_DETECTED"
@@ -239,35 +249,12 @@ class AlexaSink(Sink):
                 send_post(action, item['routine'], token)
                 item['last_state'] = action
 
+        outtime = time.time_ns()
+        state.file.write(f'alexa-sink,{intime},{outtime},sink')
+        state.file.flush()
+
         state.timer = threading.Timer(5, timeout, (state,))
         state.timer.start()
 
 def register():
     return AlexaSink
-
-#def main():
-#    import time
-#    conf = {
-#      'auth_code': '',
-#      'client_id': '',
-#      'client_secret': '',
-#      'refresh_token': '',
-#      'person_mapping': [{'name': 'SomeOne', 'routine': 'routine-trigger-01', 'last_state': 'NOT_DETECTED'},
-#                         {'name': 'SomeTwo', 'routine': 'routine-trigger-02', 'last_state': 'NOT_DETECTED'}]
-#    }
-#
-#    alexa_sink = AlexaSink()
-#    state = alexa_sink.initialize(conf)
-#    ON = {'SomeOne':1.0, 'SomeTwo':1.0}
-#    OFF = {'SomeOne':1.0, 'SomeTwo':0.0}
-#    i = 0
-#    while True:
-#        element = ON if i % 2 == 0 else OFF
-#        data = json.dumps(element)
-#        input(f'Press enter to send {element}\n')
-#        alexa_sink.run(None, state, data)
-#        print(f'Sent {element}')
-#        i += 1
-#
-#if __name__ == '__main__':
-#    main()

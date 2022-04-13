@@ -50,7 +50,7 @@ sources:
   - id : Camera
     uri: file://./camera-source/camera.py
     configuration:
-      fps: 1
+      fps: 15
     output:
         id: Capture
         type: frame
@@ -103,18 +103,18 @@ links:
     node : SensorFusion
     input : Luminosity
 
-# mapping:
-#   - id: Detection
-#     runtime: cuda
-#   - id: Recognition
-#     runtime: cuda
-#   - id: Camera
-#     runtime: mac
-#   - id: SensorFusion
-#     runtime: mac
-#   - id: LuminosityNorm
-#     runtime: mac
-#   - id: Luminosity
-#     runtime: mac
-#   - id: AlexaSink
-#     runtime: mac
+mapping:
+  - id: Detection
+    runtime: cuda
+  - id: Recognition
+    runtime: cuda
+  - id: Camera
+    runtime: mac
+  - id: SensorFusion
+    runtime: mac
+  - id: LuminosityNorm
+    runtime: mac
+  - id: Luminosity
+    runtime: mac
+  - id: AlexaSink
+    runtime: mac

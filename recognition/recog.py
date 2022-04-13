@@ -3,7 +3,7 @@ from PIL import Image
 import numpy as np
 import json
 import base64
-from zenoh_flow import Inputs, Operator, Outputs
+from zenoh_flow.interfaces import Operator
 import cv2
 import pickle
 from tensorflow.keras import models
@@ -52,12 +52,12 @@ class FaceRecognition(Operator):
         return True
 
 
-    def output_rule(self, _ctx, state, outputs, _deadline_miss):
+    def output_rule(self, _ctx, state, outputs, _deadline_miss = None):
         return outputs
 
     def run(self, _ctx, state, inputs):
         # Getting the inputs
-        data = json.loads(inputs.get('Faces').data)
+        data = json.loads(inputs.get('Faces').get_data())
         outputs = {}
         if data.get('detected_faces') is None:
             return outputs

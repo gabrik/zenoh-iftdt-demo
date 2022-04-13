@@ -1,11 +1,12 @@
 import cv2
 import numpy as np
 import json
-from zenoh_flow import Inputs, Operator, Outputs
+from zenoh_flow.interfaces import Operator
 import io
 import copy
 import base64
 from PIL import Image
+import time
 
 class DetectState:
     def __init__(self, configuration):
@@ -16,15 +17,24 @@ class DetectState:
         if configuration['net_weights'] is None:
             raise ValueError("Missing YOLO netwokr weights")
 
+        self.outfile = "/tmp/face-detect.csv"
+        if configuration['outfile'] is not None:
+            self.outfile = configuration['outfile']
+
         classes_file = configuration['classes'] #'./detection/face_classes.txt'
         net_cfg = configuration['net_cfg'] #'./detection/yolov3-face.cfg'
         net_weights = configuration['net_weights'] #./detection/yolov3-wider_16000.weights'
         model, classes = load_yolo(classes_file, net_cfg, net_weights)
+
         self.model = model
         self.classes = classes
         self.CONFIDENCE_THRESHOLD = 0.5
         self.NMS_THRESHOLD = 0.4
         self.encode_params = [int(cv2.IMWRITE_JPEG_QUALITY),100]
+
+        self.file = open(self.outfile, "w+")
+        self.file.write("node,time_in,time_out,kind")
+        self.file.flush()
 
     def detect_faces(self, frame):
         required_size=(224, 224)
@@ -52,18 +62,21 @@ class FaceDetection(Operator):
          return DetectState(configuration)
 
     def finalize(self, state):
+        state.file.close()
         return None
 
     def input_rule(self, _ctx, _state, _tokens):
         return True
 
 
-    def output_rule(self, _ctx, state, outputs, _deadline_miss):
+    def output_rule(self, _ctx, state, outputs, _deadline_miss = None):
         return outputs
 
     def run(self, _ctx, state, inputs):
+        intime = time.time_ns()
+
         # Getting the inputs
-        data = inputs.get('Image').data
+        data = inputs.get('Image').get_data()
         frame = bytes_to_frame(data)
 
         faces = state.detect_faces(frame)
@@ -80,6 +93,10 @@ class FaceDetection(Operator):
             output = {'detected_faces': base64_faces}
             #print(f'Detected {len(base64_faces)} faces')
             outputs['Faces'] = bytes(json.dumps(output), 'utf-8')
+
+        outtime = time.time_ns()
+        state.file.write(f'face-detection,{intime},{outtime},operator')
+        state.file.flush()
 
         return outputs
 

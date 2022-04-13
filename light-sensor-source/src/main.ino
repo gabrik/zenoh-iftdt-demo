@@ -19,7 +19,7 @@ extern "C" {
     #include "zenoh-pico.h"
 }
 
-#define SSID "SSID"
+#define SSID "WIFI"
 #define PASS "PASSWORD"
 
 // Zenoh-specific parameters
