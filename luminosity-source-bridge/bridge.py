@@ -24,7 +24,7 @@ zenoh.init_logger()
 
 def zlistener(sample):
     global value, has_value
-    value = struct.unpack('<f', sample.payload)[0]
+    value = int(sample.payload.decode("utf-8"))
     has_value = True
 
 class LuminosityBridgeState:
@@ -62,7 +62,7 @@ class LuminosityBridge(Source):
         while (has_value == False):
             pass
         has_value = False
-        ba = bytearray(struct.pack("f", value))
+        ba = bytearray(struct.pack("I", value))
 
         outtime = time.time_ns()
         state.file.write(f'luminosity-source,{intime},{outtime},source')

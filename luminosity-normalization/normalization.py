@@ -47,7 +47,7 @@ class LuminosityNormalization(Operator):
 
         # Getting the inputs
         data = inputs.get('LuminosityRaw').get_data()
-        value = struct.unpack('f', data)[0]
+        value = struct.unpack('I', data)[0]
         outputs = {}
 
         output = min(value, MAX)
