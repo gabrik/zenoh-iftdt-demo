@@ -1,7 +1,7 @@
 flow: HomeAutomation
 operators:
   - id : LuminosityNorm
-    uri: file://./luminosity-normalization/normalization.py
+    uri: file:///Users/gabri/Workspace/zenoh-ifttt-demo/luminosity-normalization/normalization.py
     inputs:
         - id: LuminosityRaw
           type: float
@@ -9,11 +9,11 @@ operators:
         - id: LuminosityNorm
           type: float
   - id: Detection
-    uri: file://./face-detect/detect.py
+    uri: file:///root/zenoh-iftdt-demo/face-detect/detect.py
     configuration:
-      net_cfg: ./face-detect/yolov3-face.cfg
-      net_weights: ./face-detect/yolov3-wider_16000.weights
-      classes: ./face-detect/face_classes.txt
+      net_cfg: /root/zenoh-iftdt-demo/face-detect/yolov3-face.cfg
+      net_weights: /root/zenoh-iftdt-demo/face-detect/yolov3-wider_16000.weights
+      classes: /root/zenoh-iftdt-demo/face-detect/face_classes.txt
     inputs:
       - id: Image
         type: frame
@@ -21,10 +21,10 @@ operators:
       - id: Faces
         type: face_array
   - id: Recognition
-    uri: file://./recognition/recog.py
+    uri: file:///root/zenoh-iftdt-demo/recognition/recog.py
     configuration:
-      weights: ./recognition/facenet_keras_weights.h5
-      encodings: ./recognition/encodings.pkl
+      weights: /root/zenoh-iftdt-demo/recognition/facenet_keras_weights.h5
+      encodings: /root/zenoh-iftdt-demo/recognition/encodings.pkl
     inputs:
       - id: Faces
         type: face_array
@@ -32,7 +32,7 @@ operators:
       - id: People
         type: people_array
   - id: SensorFusion
-    uri: file://./sensor-fusion/sensor-fusion.py
+    uri: file:///Users/gabri/Workspace/zenoh-ifttt-demo/sensor-fusion/sensor-fusion.py
     inputs:
       - id: People
         type: people_array
@@ -43,14 +43,14 @@ operators:
         type: lamp_dict
 sources:
   - id : Luminosity
-    uri: file://./luminosity-source-bridge/bridge.py
+    uri: file:///Users/gabri/Workspace/zenoh-ifttt-demo/luminosity-source-bridge/bridge.py
     configuration:
       key-expr: "/paris/saint-aubin/office/rooms/jl-gb/sensor/luminosity"
     output:
         id: LuminosityRaw
         type: float
   - id : Camera
-    uri: file://./camera-source/camera.py
+    uri: file:///Users/gabri/Workspace/zenoh-ifttt-demo/camera-source/camera.py
     configuration:
       fps: 15
     output:
@@ -58,12 +58,13 @@ sources:
         type: frame
 sinks:
   - id : AlexaSink
-    uri: file://./alexa-sink/alexa-sink.py
+    uri: file:///Users/gabri/Workspace/zenoh-ifttt-demo/alexa-sink/alexa-sink.py
     configuration:
       code: aa
       client_id: bb
       client_secret: cc
       refresh_token: dd
+      person_mapping: ["Gabriele_Baldoni"]
     input:
         id: Data
         type: lamp_dict

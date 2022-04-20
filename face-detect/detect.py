@@ -10,20 +10,20 @@ import time
 
 class DetectState:
     def __init__(self, configuration):
-        if configuration['classes'] is None:
+        if configuration.get('classes') is None:
             raise ValueError("Missing classes file path in configuration")
-        if configuration['net_cfg'] is None:
+        if configuration.get('net_cfg') is None:
             raise ValueError("Missing YOLO network configuration")
-        if configuration['net_weights'] is None:
+        if configuration.get('net_weights') is None:
             raise ValueError("Missing YOLO netwokr weights")
 
         self.outfile = "/tmp/face-detect.csv"
-        if configuration['outfile'] is not None:
-            self.outfile = configuration['outfile']
+        if configuration.get('outfile') is not None:
+            self.outfile = configuration.get('outfile')
 
-        classes_file = configuration['classes'] #'./detection/face_classes.txt'
-        net_cfg = configuration['net_cfg'] #'./detection/yolov3-face.cfg'
-        net_weights = configuration['net_weights'] #./detection/yolov3-wider_16000.weights'
+        classes_file = configuration.get('classes') #'./detection/face_classes.txt'
+        net_cfg = configuration.get('net_cfg') #'./detection/yolov3-face.cfg'
+        net_weights = configuration.get('net_weights') #./detection/yolov3-wider_16000.weights'
         model, classes = load_yolo(classes_file, net_cfg, net_weights)
 
         self.model = model

@@ -17,12 +17,12 @@ from scipy.spatial.distance import cosine
 
 class RecogState:
     def __init__(self, configuration):
-        if configuration['weights'] is None:
+        if configuration.get('weights') is None:
             raise ValueError("Missing weights in configuration")
-        if configuration['encodings'] is None:
+        if configuration.get('encodings') is None:
             raise ValueError("Missing encodings in configuration")
 
-        self.model = FaceNet(configuration['weights'], configuration['encodings'])
+        self.model = FaceNet(configuration.get('weights'), configuration.get('encodings'))
 
     def recognize(self, faces):
         people = []

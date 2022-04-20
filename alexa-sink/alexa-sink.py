@@ -190,30 +190,30 @@ def send_post(action, routine, token):
 
 class AlexaSinkState:
     def __init__(self, configuration):
-        if configuration['client_id'] is None:
+        if configuration.get('client_id') is None:
             raise ValueError("Missing client ID for Alexa authentication")
-        if configuration['client_secret'] is None:
+        if configuration.get('client_secret') is None:
             raise ValueError("Missing client secret for Alexa authentication")
-        if configuration['auth_code'] is None and configuration['refresh_token'] is None:
+        if configuration.get('auth_code') is None and configuration.get('refresh_token') is None:
             raise ValueError("Missing authentication code or refresh token for Alexa authentication")
-        if configuration['person_mapping'] is None:
+        if configuration.get('person_mapping') is None:
             raise ValueError("Missing person mapping to Alexa routine")
 
-        self.client_id = configuration['client_id']
-        self.client_secret = configuration['client_secret']
-        self.auth_code = configuration['auth_code']
-        self.person_mapping = configuration['person_mapping']
+        self.client_id = configuration.get('client_id')
+        self.client_secret = configuration.get('client_secret')
+        self.auth_code = configuration.get('auth_code')
+        self.person_mapping = configuration.get('person_mapping')
 
-        if configuration['refresh_token'] is None:
+        if configuration.get('refresh_token') is None:
             self.refresh_token = read_refresh_token()
         else:
-            self.refresh_token = configuration['refresh_token']
+            self.refresh_token = configuration.get('refresh_token')
 
         self.timer = None
 
         self.outfile = "/tmp/alexa-sink.csv"
-        if configuration['outfile'] is not None:
-            self.outfile = configuration['outfile']
+        if configuration.get('outfile') is not None:
+            self.outfile = configuration.get('outfile')
         self.file = open(self.outfile, "w+")
         self.file.write("node,time_in,time_out,kind")
         self.file.flush()
@@ -254,7 +254,7 @@ class AlexaSink(Sink):
 
             if action != item['last_state']:
                 state.output.write("Sending post")
-                send_post(action, item['routine'], token)
+                #send_post(action, item['routine'], token)
                 item['last_state'] = action
 
         outtime = time.time_ns()

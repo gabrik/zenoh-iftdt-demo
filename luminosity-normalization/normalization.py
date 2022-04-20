@@ -22,7 +22,7 @@ class State:
     def __init__(self, configuration):
         self.outfile = "/tmp/normalization.csv"
         if configuration is not None and configuration.get('outfile') is not None:
-            self.outfile = configuration['outfile']
+            self.outfile = configuration.get('outfile')
         self.file = open(self.outfile, "w+")
         self.file.write("node,time_in,time_out,kind")
         self.file.flush()

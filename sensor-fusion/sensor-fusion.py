@@ -10,8 +10,8 @@ class SensorFusionState:
         self.know_people = configuration.get('people', [])
 
         self.outfile = "/tmp/fusion.csv"
-        if configuration['outfile'] is not None:
-            self.outfile = configuration['outfile']
+        if configuration.get('outfile') is not None:
+            self.outfile = configuration.get('outfile')
         self.file = open(self.outfile, "w+")
         self.file.write("node,time_in,time_out,kind")
         self.file.flush()

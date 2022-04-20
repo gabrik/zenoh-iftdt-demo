@@ -31,7 +31,7 @@ class LuminosityBridgeState:
     def __init__(self, configuration={}):
         self.key_expr = '/paris/office/gb-jl/luminosity'
         if configuration is not None and configuration.get('key-expr') is not None:
-             self.key_expr = configuration['key-expr']
+             self.key_expr = configuration.get('key-expr')
 
         self.zenoh_conf = zenoh.Config()
         self.zenoh_conf.insert_json5(zenoh.config.MODE_KEY, '"client"')
@@ -42,7 +42,7 @@ class LuminosityBridgeState:
 
         self.outfile = "/tmp/luminosity-source.csv"
         if configuration is not None and configuration.get('outfile') is not None:
-            self.outfile = configuration['outfile']
+            self.outfile = configuration.get('outfile')
         self.file = open(self.outfile, "w+")
         self.file.write("node,time_in,time_out,kind")
         self.file.flush()
