@@ -22,9 +22,9 @@ class CameraState:
     def __init__(self, configuration):
         self.sleep = 0
         self.outfile = "/tmp/camera-source.csv"
-        if configuration['fps'] is not None:
+        if configuration is not None and configuration['fps'] is not None:
             self.sleep = 1//int(configuration['fps'])
-        if configuration['outfile'] is not None:
+        if configuration is not None and configuration['outfile'] is not None:
             self.outfile = configuration['outfile']
         self.camera = cv2.VideoCapture(0)
         self.encode_params = [int(cv2.IMWRITE_JPEG_QUALITY),100]

@@ -44,6 +44,8 @@ operators:
 sources:
   - id : Luminosity
     uri: file://./luminosity-source-bridge/bridge.py
+    configuration:
+      key-expr: "/paris/saint-aubin/office/rooms/jl-gb/sensor/luminosity"
     output:
         id: LuminosityRaw
         type: float
@@ -104,17 +106,10 @@ links:
     input : Luminosity
 
 mapping:
-  - id: Detection
-    runtime: cuda
-  - id: Recognition
-    runtime: cuda
-  - id: Camera
-    runtime: mac
-  - id: SensorFusion
-    runtime: mac
-  - id: LuminosityNorm
-    runtime: mac
-  - id: Luminosity
-    runtime: mac
-  - id: AlexaSink
-    runtime: mac
+  Detection: cuda
+  Recognition: cuda
+  Camera: mac
+  SensorFusion: mac
+  LuminosityNorm: mac
+  Luminosity: mac
+  AlexaSink: mac

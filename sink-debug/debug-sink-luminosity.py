@@ -13,19 +13,29 @@
 #
 
 from zenoh_flow.interfaces import Sink
-
 import struct
+
+class OutputData:
+    def __init__(self, filename="/tmp/zf-iftdt.out"):
+        self.file = open(filename, "w+")
+    def close(self):
+        self.file.close()
+
 
 class LuminositySink(Sink):
     def initialize(self, configuration):
-        return None
+        return OutputData()
 
-    def finalize(self, _state):
-        return None
+    def finalize(self, state):
+        return state.close()
 
     def run(self, _ctx, state, data):
         monitoring = struct.unpack('f', data.get_data())[0]
-        print(f'Monitoring received {monitoring}')
+        result = f'Monitoring received {monitoring}\n'
+
+        state.file.write(result)
+        state.file.flush()
+
 
 def register():
     return LuminositySink

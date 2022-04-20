@@ -1,13 +1,15 @@
 flow: LuminosityDebug
 sources:
   - id : Luminosity
-    uri: file:///Users/user/Documents/zenoh-flow-lab/zenoh-ifttt-demo/luminosity-source-bridge/bridge.py
+    uri: file:///Users/gabri/Workspace/zenoh-ifttt-demo/luminosity-source-bridge/bridge.py
+    configuration:
+      key-expr: "/paris/saint-aubin/office/rooms/jl-gb/sensor/luminosity"
     output:
         id: LuminosityRaw
         type: float
 operators:
   - id : LuminosityNorm
-    uri: file:///Users/user/Documents/zenoh-flow-lab/zenoh-ifttt-demo/luminosity-normalization/normalization.py
+    uri: file:///Users/gabri/Workspace/zenoh-ifttt-demo/luminosity-normalization/normalization.py
     inputs:
         - id: LuminosityRaw
           type: float
@@ -16,7 +18,7 @@ operators:
           type: float
 sinks:
   - id : DebugOutput
-    uri: file:///Users/user/Documents/zenoh-flow-lab/zenoh-ifttt-demo/sink-debug/debug-sink-luminosity.py
+    uri: file:///Users/gabri/Workspace/zenoh-ifttt-demo/sink-debug/debug-sink-luminosity.py
     input:
         id: Luminosity
         type: float
@@ -33,3 +35,9 @@ links:
   to:
     node : DebugOutput
     input : Luminosity
+
+
+mapping:
+  Luminosity : mac
+  LuminosityNorm : mac
+  DebugOutput: mac

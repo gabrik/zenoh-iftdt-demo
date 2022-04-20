@@ -33,11 +33,15 @@ class LuminosityBridgeState:
         if configuration is not None and configuration.get('key-expr') is not None:
              self.key_expr = configuration['key-expr']
 
-        self.zenoh = zenoh.open(None)
+        self.zenoh_conf = zenoh.Config()
+        self.zenoh_conf.insert_json5(zenoh.config.MODE_KEY, '"client"')
+        self.zenoh_conf.insert_json5(zenoh.config.CONNECT_KEY, '["tcp/127.0.0.1:7447"]')
+
+        self.zenoh = zenoh.open(self.zenoh_conf)
         self.sub = self.zenoh.subscribe(self.key_expr, zlistener)
 
         self.outfile = "/tmp/luminosity-source.csv"
-        if configuration['outfile'] is not None:
+        if configuration is not None and configuration.get('outfile') is not None:
             self.outfile = configuration['outfile']
         self.file = open(self.outfile, "w+")
         self.file.write("node,time_in,time_out,kind")
@@ -62,7 +66,7 @@ class LuminosityBridge(Source):
         while (has_value == False):
             pass
         has_value = False
-        ba = bytearray(struct.pack("I", value))
+        ba = struct.pack("I", value)
 
         outtime = time.time_ns()
         state.file.write(f'luminosity-source,{intime},{outtime},source')

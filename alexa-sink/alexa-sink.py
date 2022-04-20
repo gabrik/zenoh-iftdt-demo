@@ -218,6 +218,12 @@ class AlexaSinkState:
         self.file.write("node,time_in,time_out,kind")
         self.file.flush()
 
+        self.output =  open("/tmp/sink-alexa.out", "w+")
+
+    def close(self):
+        self.file.close()
+        self.output.close()
+
 class AlexaSink(Sink):
     def initialize(self, configuration):
         return AlexaSinkState(configuration)
@@ -236,16 +242,18 @@ class AlexaSink(Sink):
         if token == None:
             return
         actions = json.loads(data.get_data())
-        print(f'Actions {actions}')
+
+        state.output.write(f'Actions {actions}')
+
         for item in state.person_mapping:
             action = "NOT_DETECTED"
             if actions.get(item['name']) is not None:
                 if actions[item['name']] != 0.0:
-                    print('Detected')
+                    state.output.write('Detected')
                     action = "DETECTED"
 
             if action != item['last_state']:
-                print("Sending post")
+                state.output.write("Sending post")
                 send_post(action, item['routine'], token)
                 item['last_state'] = action
 

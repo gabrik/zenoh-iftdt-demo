@@ -16,12 +16,12 @@ from zenoh_flow.interfaces import Operator
 import struct
 import time
 
-MAX = 500.0
+MAX = 2000.0
 
 class State:
     def __init__(self, configuration):
         self.outfile = "/tmp/normalization.csv"
-        if configuration['outfile'] is not None:
+        if configuration is not None and configuration.get('outfile') is not None:
             self.outfile = configuration['outfile']
         self.file = open(self.outfile, "w+")
         self.file.write("node,time_in,time_out,kind")
@@ -42,7 +42,7 @@ class LuminosityNormalization(Operator):
     def output_rule(self, _ctx, _state, outputs, _deadline_miss = None):
         return outputs
 
-    def run(self, _ctx, _state, inputs):
+    def run(self, _ctx, state, inputs):
         intime = time.time_ns()
 
         # Getting the inputs
@@ -53,7 +53,7 @@ class LuminosityNormalization(Operator):
         output = min(value, MAX)
         output = output / MAX
 
-        outputs['LuminosityNorm'] = bytearray(struct.pack("f", output))
+        outputs['LuminosityNorm'] = struct.pack("f", output)
 
         outtime = time.time_ns()
         state.file.write(f'normalization,{intime},{outtime},operator')
