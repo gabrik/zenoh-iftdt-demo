@@ -19,7 +19,7 @@ from typing import Dict, Any
 import asyncio
 
 
-class MySink(Sink):
+class MySink():
     def finalize(self):
         return None
 
@@ -31,8 +31,20 @@ class MySink(Sink):
     ):
         self.input = inputs.get("Value", None)
 
-    async def iteration(self) -> None:
+
+    def iteration(self) -> None:
+        print(f'Value is: {self.input}\n')
         return None
 
 def register():
     return MySink
+
+def main():
+    import time
+    bs = MySink("" ,"", {'Value': x})
+    while True:
+        time.sleep(1)
+        bs.iteration()
+
+if __name__=='__main__':
+    main()
