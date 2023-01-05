@@ -12,32 +12,27 @@
 ##   ADLINK zenoh team, <zenoh@adlink-labs.tech>
 ##
 
-from zenoh_flow import Sink
+from zenoh_flow.interfaces import Sink
+from zenoh_flow import Input
+from zenoh_flow.types import Context
+from typing import Dict, Any
+import asyncio
 
 
-class BasicSink(Sink):
-    def initialize(self, _configuration):
-        return {}
-    def finalize(self, state):
-
+class MySink(Sink):
+    def finalize(self):
         return None
 
-    def run(self, _ctx, state, data):
-        print(f'Data {data}')
+    def __init__(
+        self,
+        context: Context,
+        configuration: Dict[str, Any],
+        inputs: Dict[str, Input],
+    ):
+        self.input = inputs.get("Value", None)
 
-
+    async def iteration(self) -> None:
+        return None
 
 def register():
-    return BasicSink
-
-
-def main():
-    import time
-    bs = BasicSink()
-    state = bs.initialize({})
-    while True:
-        time.sleep(1)
-        bs.run(None, state, b'Hello')
-
-if __name__=='__main__':
-    main()
+    return MySink
