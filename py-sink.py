@@ -41,7 +41,7 @@ def register():
 
 def main():
     import time
-    bs = MySink("" ,"", {'Value': x})
+    bs = MySink("" ,"", {'Value': "vv"})
     while True:
         time.sleep(1)
         bs.iteration()
