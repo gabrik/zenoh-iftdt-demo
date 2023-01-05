@@ -39,11 +39,11 @@ export_python!(register);
 
 fn register() -> Arc<dyn PythonCode> {
 
-    let config = pyo3_build_config::get();
-    match &config.lib_name {
-        Some(name) => println!("Python lib is: {}" ,name.clone()),
-        None => panic!("Unable to find Python version"),
-    }
+    // let config = pyo3_build_config::get();
+    // match &config.lib_name {
+    //     Some(name) => println!("Python lib is: {}" ,name.clone()),
+    //     None => panic!("Unable to find Python version"),
+    // }
 
     Arc::new(PythonWrapper {}) as Arc<dyn PythonCode>
 }

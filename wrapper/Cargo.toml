@@ -8,7 +8,7 @@ edition = "2018"
 [dependencies]
 loader = {path = "../loader"}
 pyo3 = "0.16"
-pyo3-build-config = { version = "0.16", features = ["resolve-config"] }
+# pyo3-build-config = { version = "0.16", features = ["resolve-config"] }
 
 [features]
 abi-py37 = ["pyo3/abi3-py37"]
