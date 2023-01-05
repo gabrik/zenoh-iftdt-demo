@@ -19,7 +19,7 @@ impl PythonCode for PythonWrapper {
         let module = match PyModule::from_code(py, &code, "op.py", "op") {
             Ok(m) => m,
             Err(err) => {
-                let tb = err.ptraceback(py).unwrap();
+                let tb = err.traceback(py).unwrap();
                 println!("Python TraceBack: {}", tb.format().unwrap());
                 panic!("{}", err);
             }
@@ -27,7 +27,7 @@ impl PythonCode for PythonWrapper {
         match module.call_method0("main") {
             Ok(_) => (),
             Err(err) => {
-                let tb = err.ptraceback(py).unwrap();
+                let tb = err.traceback(py).unwrap();
                 println!("Python TraceBack: {}", tb.format().unwrap());
                 panic!("{}", err);
             }
@@ -38,6 +38,13 @@ impl PythonCode for PythonWrapper {
 export_python!(register);
 
 fn register() -> Arc<dyn PythonCode> {
+
+    let config = pyo3_build_config::get();
+    match &config.lib_name {
+        Some(name) => println!("Python lib is: {}" ,name.clone()),
+        None => panic!("Unable to find Python version"),
+    }
+
     Arc::new(PythonWrapper {}) as Arc<dyn PythonCode>
 }
 
